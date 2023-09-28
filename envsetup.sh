@@ -320,6 +320,9 @@ function setpaths()
     unset TARGET_BOARD_PLATFORM
     export TARGET_BOARD_PLATFORM=$(get_build_var TARGET_BOARD_PLATFORM)
 
+    unset BOARD_HS_DYNAMIC_AFBC_TARGET
+    export BOARD_HS_DYNAMIC_AFBC_TARGET=$(get_build_var BOARD_HS_DYNAMIC_AFBC_TARGET)
+
     unset TARGET_RK_GRALLOC_VERSION
     export TARGET_RK_GRALLOC_VERSION=$(get_build_var TARGET_RK_GRALLOC_VERSION)
 
@@ -346,6 +349,7 @@ function set_stuff_for_environment()
     setpaths
     set_sequence_number
 
+    export ANDROID_BUILD_TOP=$(gettop)
     # With this environment variable new GCC can apply colors to warnings/errors
     export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 }
@@ -1613,5 +1617,3 @@ function source_vendorsetup() {
 validate_current_shell
 source_vendorsetup
 addcompletions
-
-export ANDROID_BUILD_TOP=$(gettop)

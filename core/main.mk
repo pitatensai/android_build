@@ -19,6 +19,9 @@ $(DEFAULT_GOAL): droid_targets
 .PHONY: droid_targets
 droid_targets:
 
+# Include prebuild.mk
+-include device/rockchip/common/prebuild.mk
+
 # Set up various standard variables based on configuration
 # and host information.
 include build/make/core/config.mk
@@ -38,8 +41,13 @@ include $(BUILD_SYSTEM)/clang/config.mk
 # Write the build number to a file so it can be read back in
 # without changing the command line every time.  Avoids rebuilds
 # when using ninja.
+ifdef ROCKCHIP_BUILD_NUMBER
+$(shell mkdir -p $(SOONG_OUT_DIR) && \
+    echo -n $(ROCKCHIP_BUILD_NUMBER) > $(SOONG_OUT_DIR)/build_number.txt)
+else
 $(shell mkdir -p $(SOONG_OUT_DIR) && \
     echo -n $(BUILD_NUMBER) > $(SOONG_OUT_DIR)/build_number.txt)
+endif
 BUILD_NUMBER_FILE := $(SOONG_OUT_DIR)/build_number.txt
 .KATI_READONLY := BUILD_NUMBER_FILE
 $(KATI_obsolete_var BUILD_NUMBER,See https://android.googlesource.com/platform/build/+/master/Changes.md#BUILD_NUMBER)
@@ -55,7 +63,11 @@ ifeq ($(strip $(HAS_BUILD_NUMBER)),false)
   # it will change every time.  Pick a stable value.
   FILE_NAME_TAG := eng.$(BUILD_USERNAME)
 else
-  FILE_NAME_TAG := $(file <$(BUILD_NUMBER_FILE))
+  ifdef ROCKCHIP_BUILD_NUMBER
+    FILE_NAME_TAG := $(ROCKCHIP_BUILD_NUMBER)
+  else
+    FILE_NAME_TAG := $(file <$(BUILD_NUMBER_FILE))
+  endif
 endif
 .KATI_READONLY := FILE_NAME_TAG
 
@@ -360,6 +372,9 @@ endif
 BUILD_WITHOUT_PV := true
 
 ADDITIONAL_BUILD_PROPERTIES += net.bt.name=Android
+
+#add by haidern
+ADDITIONAL_BUILD_PROPERTIES += persist.sys.timezone=Asia/Shanghai
 
 # ------------------------------------------------------------
 # Define a function that, given a list of module tags, returns
@@ -902,7 +917,8 @@ endef
 # $(1): the prefix of the module doing the linking
 # $(2): the prefix of the linked module
 define link-type-error
-$(shell $(call echo-error,$($(1).MAKEFILE),"$(call link-type-name,$(1)) ($($(1).TYPE)) can not link against $(call link-type-name,$(2)) ($(3))"))
+$(shell $(call echo-error,$($(1).MAKEFILE),"$(call link-type-name,$(1)) ($($(1).TYPE)) can not link against $(call link-type-name,$(2)) ($(3))"))\
+$(eval link_type_error := true)
 endef
 
 link-type-missing :=

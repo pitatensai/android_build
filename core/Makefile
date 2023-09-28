@@ -328,6 +328,14 @@ BUILD_KEYS := test-keys
 else
 BUILD_KEYS := dev-keys
 endif
+
+# For user fingerprint
+ifeq ($(TARGET_BUILD_VARIANT),eng)
+BUILD_KEYS := test-keys
+else
+BUILD_KEYS := release-keys
+endif
+
 BUILD_VERSION_TAGS += $(BUILD_KEYS)
 BUILD_VERSION_TAGS := $(subst $(space),$(comma),$(sort $(BUILD_VERSION_TAGS)))
 
@@ -337,10 +345,14 @@ $(intermediate_system_build_prop): PRIVATE_BUILD_DESC := $(build_desc)
 
 # The string used to uniquely identify the combined build and product; used by the OTA server.
 ifeq (,$(strip $(BUILD_FINGERPRINT)))
-  ifeq ($(strip $(HAS_BUILD_NUMBER)),false)
-    BF_BUILD_NUMBER := $(BUILD_USERNAME)$$($(DATE_FROM_FILE) +%m%d%H%M)
+  ifdef ROCKCHIP_BUILD_NUMBER
+    BF_BUILD_NUMBER := $(ROCKCHIP_BUILD_NUMBER)
   else
-    BF_BUILD_NUMBER := $(file <$(BUILD_NUMBER_FILE))
+    ifeq ($(strip $(HAS_BUILD_NUMBER)),false)
+      BF_BUILD_NUMBER := $(BUILD_USERNAME)$$($(DATE_FROM_FILE) +%m%d%H%M)
+    else
+      BF_BUILD_NUMBER := $(file <$(BUILD_NUMBER_FILE))
+    endif
   endif
   BUILD_FINGERPRINT := $(PRODUCT_BRAND)/$(TARGET_PRODUCT)/$(TARGET_DEVICE):$(PLATFORM_VERSION)/$(BUILD_ID)/$(BF_BUILD_NUMBER):$(TARGET_BUILD_VARIANT)/$(BUILD_VERSION_TAGS)
 endif
@@ -1399,6 +1411,8 @@ INSTALLED_TRUST_TARGET := $(strip $(wildcard u-boot/trust_with_ta.img))
 else
 INSTALLED_TRUST_TARGET := $(strip $(wildcard u-boot/trust.img))
 endif
+
+INSTALLED_EBOOK_LOGO_TARGET := $(strip $(wildcard $(TARGET_DEVICE_DIR)/ota/logo.img))
 
 .PHONY: notice_files
 
@@ -3878,7 +3892,9 @@ ifeq ($(filter true,$(BUILDING_PRODUCT_IMAGE)),$(filter true,$(BOARD_USES_PRODUC
 ifeq ($(filter true,$(BUILDING_SYSTEM_EXT_IMAGE)),$(filter true,$(BOARD_USES_SYSTEM_EXTIMAGE)))
 
 check_vintf_compatible_log := $(intermediates)/check_vintf_compatible_log
+ifneq ($(BUILD_WITH_RK_EBOOK),true)
 check_vintf_all_deps += $(check_vintf_compatible_log)
+endif
 
 check_vintf_compatible_args :=
 check_vintf_compatible_deps := $(check_vintf_common_srcs)
@@ -4798,6 +4814,13 @@ ifeq (1,$(strip $(shell expr $(BOARD_BOOT_HEADER_VERSION) \>= 3)))
 	$(hide) mkdir -p $(zip_root)/IMAGES
 	$(hide) cp $(TARGET_PREBUILT_RESOURCE) $(zip_root)/IMAGES/resource.img
 endif
+endif
+
+ifeq ($(INSTALLED_EBOOK_LOGO_TARGET),)
+	$(info No logo.img to otapackage)
+else
+	$(hide) mkdir -p $(zip_root)/IMAGES
+	$(hide) cp $(INSTALLED_EBOOK_LOGO_TARGET) $(zip_root)/IMAGES/logo.img
 endif
 
 ifneq ($(PRODUCT_SYSTEM_BASE_FS_PATH),)
